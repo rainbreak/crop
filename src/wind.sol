@@ -56,28 +56,28 @@ interface Comptroller {
 }
 
 contract USDCJoin is CropJoin {
-    CToken      public cgem;
-    Comptroller public comptroller;
+    CToken      public immutable cgem;
+    Comptroller public immutable comptroller;
 
-    uint256 public cf   = 0.75   ether;  // usdc max collateral factor
-    uint256 public maxf = 0.675  ether;  // maximum collateral factor  (90%)
-    uint256 public minf = 0.674 ether;  // minimum collateral factor  (85%)
+    uint256 public constant cf   = 0.75   ether;  // usdc max collateral factor
+    uint256 public constant maxf = 0.675  ether;  // maximum collateral factor  (90%)
+    uint256 public constant minf = 0.674  ether;  // minimum collateral factor  (85%)
 
     constructor(address vat_, bytes32 ilk_, address gem_,
                 address cgem_, address comp_, address comptroller_)
         public
         CropJoin(vat_, ilk_, gem_, comp_)
     {
-        cgem = CToken(cgem_);
-        comptroller = Comptroller(comptroller_);
-
-        gem.approve(address(cgem), uint(-1));
+        ERC20(gem_).approve(cgem_, uint(-1));
 
         address[] memory ctokens = new address[](1);
-        ctokens[0] = address(cgem);
+        ctokens[0] = cgem_;
         uint256[] memory errors = new uint[](1);
-        errors = comptroller.enterMarkets(ctokens);
+        errors = Comptroller(comptroller_).enterMarkets(ctokens);
         require(errors[0] == 0);
+
+        cgem = CToken(cgem_);
+        comptroller = Comptroller(comptroller_);
     }
 
     function nav() public override returns (uint) {
