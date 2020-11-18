@@ -98,10 +98,10 @@ contract CropJoin {
 
         if (total > 0) share = add(share, rdiv(crop(), total));
 
-        require(bonus.transfer(msg.sender, sub(rmul(stake[usr], share), crops[usr])));
+        require(bonus.transfer(usr, sub(rmul(stake[usr], share), crops[usr])));
         stock = bonus.balanceOf(address(this));
         if (wad > 0) {
-            require(gem.transferFrom(usr, address(this), val));
+            require(gem.transferFrom(msg.sender, address(this), val));
             vat.slip(ilk, usr, int(wad));
 
             total = add(total, wad);
