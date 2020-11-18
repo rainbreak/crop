@@ -176,7 +176,7 @@ contract USDCJoin is CropJoin {
             require(gem.transfer(msg.sender, loan_));
         }
         if (exit_ > 0) {
-            exit(exit_);
+            exit(msg.sender, exit_);
         }
 
         uint u_ = wdiv(cgem.borrowBalanceStored(address(this)),

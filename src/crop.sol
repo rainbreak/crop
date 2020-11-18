@@ -92,17 +92,16 @@ contract CropJoin {
     }
 
     // decimals: underlying=dec cToken=8 comp=18 gem=18
-    function join(uint256 val) public {
+    function join(address usr, uint256 val) public {
         uint wad = wdiv(mul(val, 10 ** (18 - dec)), nps());
         require(int(wad) >= 0);
 
         if (total > 0) share = add(share, rdiv(crop(), total));
 
-        address usr = msg.sender;
-        require(bonus.transfer(msg.sender, sub(rmul(stake[usr], share), crops[usr])));
+        require(bonus.transfer(usr, sub(rmul(stake[usr], share), crops[usr])));
         stock = bonus.balanceOf(address(this));
         if (wad > 0) {
-            require(gem.transferFrom(usr, address(this), val));
+            require(gem.transferFrom(msg.sender, address(this), val));
             vat.slip(ilk, usr, int(wad));
 
             total = add(total, wad);
@@ -111,23 +110,22 @@ contract CropJoin {
         crops[usr] = rmul(stake[usr], share);
     }
 
-    function exit(uint val) public {
+    function exit(address usr, uint val) public {
         uint wad = wdiv(mul(val, 10 ** (18 - dec)), nps());
         require(int(wad) >= 0);
 
         if (total > 0) share = add(share, rdiv(crop(), total));
 
-        address usr = msg.sender;
-        require(bonus.transfer(msg.sender, sub(rmul(stake[usr], share), crops[usr])));
+        require(bonus.transfer(usr, sub(rmul(stake[msg.sender], share), crops[msg.sender])));
         stock = bonus.balanceOf(address(this));
         if (wad > 0) {
             require(gem.transfer(usr, val));
-            vat.slip(ilk, usr, -int(wad));
+            vat.slip(ilk, msg.sender, -int(wad));
 
             total = sub(total, wad);
-            stake[usr] = sub(stake[usr], wad);
+            stake[msg.sender] = sub(stake[msg.sender], wad);
         }
-        crops[usr] = rmul(stake[usr], share);
+        crops[msg.sender] = rmul(stake[msg.sender], share);
     }
 
     function flee() public {
