@@ -125,7 +125,7 @@ contract CanJoin is CanCall {
     USDCJoin adapter;
     function can_exit(uint val) public returns (bool) {
         bytes memory call = abi.encodeWithSignature
-            ("exit(uint256)", val);
+            ("exit(address,uint256)", address(this), val);
         return can_call(address(adapter), call);
     }
     function can_wind(uint borrow, uint n, uint loan) public returns (bool) {
@@ -157,13 +157,13 @@ contract Usr is CanJoin {
         Token(coin).approve(usr, uint(-1));
     }
     function join(uint wad) public {
-        adapter.join(wad);
+        adapter.join(address(this), wad);
     }
     function exit(uint wad) public {
-        adapter.exit(wad);
+        adapter.exit(address(this), wad);
     }
     function reap() public {
-        adapter.join(0);
+        adapter.join(address(this), 0);
     }
     function flee() public {
         adapter.flee();
@@ -275,24 +275,24 @@ contract SimpleCropTest is CropTestBase {
     function test_simple_join_exit() public {
         usdc.approve(address(adapter), uint(-1));
 
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         assertEq(comp.balanceOf(self), 0 * 1e18, "no initial rewards");
 
         reward(address(adapter), 10 * 1e18);
-        adapter.join(0); adapter.join(0);  // have to do it twice for some comptroller reason
+        adapter.join(address(this), 0); adapter.join(address(this), 0);  // have to do it twice for some comptroller reason
         assertEq(comp.balanceOf(self), 10 * 1e18, "rewards increase with reap");
 
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         assertEq(comp.balanceOf(self), 10 * 1e18, "rewards invariant over join");
 
-        adapter.exit(200 * 1e6);
+        adapter.exit(address(this), 200 * 1e6);
         assertEq(comp.balanceOf(self), 10 * 1e18, "rewards invariant over exit");
 
-        adapter.join(50 * 1e6);
+        adapter.join(address(this), 50 * 1e6);
 
         assertEq(comp.balanceOf(self), 10 * 1e18);
         reward(address(adapter), 10 * 1e18);
-        adapter.join(10 * 1e6);
+        adapter.join(address(this), 10 * 1e6);
         assertEq(comp.balanceOf(self), 20 * 1e18);
     }
     function test_complex_scenario() public {
@@ -418,15 +418,15 @@ contract SimpleCropTest is CropTestBase {
     function test_flee() public {
         usdc.approve(address(adapter), uint(-1));
 
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         assertEq(comp.balanceOf(self), 0 * 1e18, "no initial rewards");
 
         reward(address(adapter), 10 * 1e18);
-        adapter.join(0); adapter.join(0);  // have to do it twice for some comptroller reason
+        adapter.join(address(this), 0); adapter.join(address(this), 0);  // have to do it twice for some comptroller reason
         assertEq(comp.balanceOf(self), 10 * 1e18, "rewards increase with reap");
 
         reward(address(adapter), 10 * 1e18);
-        adapter.exit(50 * 1e6);
+        adapter.exit(address(this), 50 * 1e6);
         assertEq(comp.balanceOf(self), 20 * 1e18, "rewards increase with exit");
 
         reward(address(adapter), 10 * 1e18);
@@ -575,7 +575,7 @@ contract CompTest is SimpleCropTest {
 
     function test_join() public {
         usdc.approve(address(adapter), uint(-1));
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
     }
 }
 
@@ -721,7 +721,7 @@ contract RealCompTest is CropTestBase {
     }
 
     function test_unwind_multiple() public {
-        adapter.join(100e6);
+        adapter.join(address(this), 100e6);
 
         set_cf(0.72e18);
         adapter.unwind(0, 1, 0, 0);
@@ -747,7 +747,7 @@ contract RealCompTest is CropTestBase {
     function test_unwind_over_limit() public {
         // we need a loan of
         //   L / s0 >= (u - cf) / (cf * (1 - u) * (1 - cf))
-        adapter.join(100e6);
+        adapter.join(address(this), 100e6);
         set_cf(0.77e18);
         log_named_uint("cf", get_cf());
 
@@ -764,7 +764,7 @@ contract RealCompTest is CropTestBase {
     }
 
     function test_unwind_under_limit() public {
-        adapter.join(100e6);
+        adapter.join(address(this), 100e6);
         set_cf(0.673e18);
         log_named_uint("cf", get_cf());
         assertTrue(!can_unwind(0, 1, 0, 0));
@@ -932,7 +932,7 @@ contract RealCompTest is CropTestBase {
     // into the ctoken. In order to exit we will have to free up some
     // underlying.
     function wound_unwind_exit(bool loan) public {
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
 
         assertEq(comp.balanceOf(self), 0 ether, "no initial rewards");
 
@@ -986,20 +986,20 @@ contract RealCompTest is CropTestBase {
         wound_unwind_exit(true);
     }
     function test_unwind_full_exit() public {
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         set_cf(0.675e18);
 
         // we can unwind in a single cycle using a loan
         adapter.unwind(0, 1, 100e6 - 1e4, 177 * 1e6);
 
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         set_cf(0.675e18);
 
         // or we can unwind by iteration without a loan
         adapter.unwind(0, 6, 100e6 - 1e4, 0);
     }
     function test_unwind_gas_flash() public {
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         set_cf(0.675e18);
         uint gas_before = gasleft();
         adapter.unwind(0, 1, 100e6 - 1e4, 177e6);
@@ -1014,7 +1014,7 @@ contract RealCompTest is CropTestBase {
         log_named_uint("gas", gas_before - gas_after);
     }
     function test_unwind_gas_iteration() public {
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         set_cf(0.675e18);
         uint gas_before = gasleft();
         adapter.unwind(0, 5, 100e6 - 1e4, 0);
@@ -1031,7 +1031,7 @@ contract RealCompTest is CropTestBase {
     function test_unwind_gas_shallow() public {
         // we can withdraw a fraction of the pool without loans or
         // iterations
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         set_cf(0.675e18);
         uint gas_before = gasleft();
         adapter.unwind(0, 1, 14e6, 0);
@@ -1052,7 +1052,7 @@ contract RealCompTest is CropTestBase {
         require(cToken(address(cusdc)).accrueInterest() == 0);
         (Usr a,) = init_user();
 
-        adapter.join(600 * 1e6);
+        adapter.join(address(this), 600 * 1e6);
 
         assertEq(usdc.balanceOf(address(a)), 200 * 1e6);
         a.join(100 * 1e6);
@@ -1099,7 +1099,7 @@ contract RealCompTest is CropTestBase {
 
         (Usr a,) = init_user();
 
-        adapter.join(600 * 1e6);
+        adapter.join(address(this), 600 * 1e6);
 
         assertEq(usdc.balanceOf(address(a)), 200 * 1e6);
         a.join(100 * 1e6);
@@ -1204,7 +1204,7 @@ contract RealCompTest is CropTestBase {
     function test_can_seize() public {
         enable_seize(address(this));
 
-        adapter.join(100 * 1e6);
+        adapter.join(address(this), 100 * 1e6);
         adapter.wind(0, 4, 0);
 
         uint seize = 100 * 1e8;
@@ -1224,7 +1224,7 @@ contract RealCompTest is CropTestBase {
 
         (Usr a,) = init_user();
 
-        adapter.join(600 * 1e6);
+        adapter.join(address(this), 600 * 1e6);
         a.join(100 * 1e6);
         log_named_uint("nps", adapter.nps());
         log_named_uint("usdc ", usdc.balanceOf(address(adapter)));
